@@ -1,0 +1,120 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseHighlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
+  }
+}
+
+/* Animation classes */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-pulseHighlight {
+  animation: pulseHighlight 1.5s ease-out;
+}
+
+/* Font size utility classes */
+[data-font-size="small"] .text-message {
+  font-size: 0.875rem;
+}
+
+[data-font-size="medium"] .text-message {
+  font-size: 1rem;
+}
+
+[data-font-size="large"] .text-message {
+  font-size: 1.125rem;
+}
+
+/* Message density utility classes */
+[data-message-density="compact"] .message-spacing {
+  margin-bottom: 0.5rem;
+}
+
+[data-message-density="comfortable"] .message-spacing {
+  margin-bottom: 1rem;
+}
+
+[data-message-density="spacious"] .message-spacing {
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive design improvements */
+@media (max-width: 640px) {
+  .message-container {
+    max-width: 90% !important;
+  }
+  
+  .input-container {
+    padding: 0.75rem !important;
+  }
+  
+  .header-container {
+    padding: 0.75rem 1rem !important;
+  }
+}
+
+/* Transition styles */
+.transition-theme {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
