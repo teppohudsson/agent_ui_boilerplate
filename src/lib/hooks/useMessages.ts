@@ -141,7 +141,6 @@ export function useMessages(conversationId?: string) {
             // Decode the chunk and add it to the accumulated content
             const chunk = decoder.decode(value, { stream: true });
             chunkCount++;
-            console.log(`Received chunk #${chunkCount}:`, chunk);
             accumulatedContent += chunk;
             
             // Update the AI message with the accumulated content

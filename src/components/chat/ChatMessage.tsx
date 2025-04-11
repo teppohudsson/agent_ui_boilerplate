@@ -73,31 +73,37 @@ const ChatMessage: FC<ChatMessageProps> = ({
       <div className="flex w-full flex-col">
         
         {/* Message content */}
+        <div className={cn('',
+          isCurrentUser && 'ml-[35%] flex justify-end')}
+          >
         <div
           className={cn(
             "rounded-lg transition-all",
             getPadding(),
             getFontSize(),
             isCurrentUser
-              ? 'bg-secondary ml-[35%] text-secondary-foreground animate-slideInRight w-[65%]'
+              ? 'bg-secondary  w-fit text-secondary-foreground animate-slideInRight'
               : isAssistant
                 ? 'bg-none text-secondary-foreground animate-slideInLeft'
                 : 'bg-muted text-muted-foreground animate-slideInLeft'
           )}
           tabIndex={0}
         >
-          {isTyping ? (
-            <div className="flex items-center space-x-1" aria-label="Assistant is typing">
+          {isTyping && (
+            <div className="flex items-center space-x-1 mb-2" aria-label="Assistant is typing">
+              <div className="italic pr-2">Thinking </div>
               <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"></div>
               <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"></div>
               <div className="h-2 w-2 animate-bounce rounded-full bg-current"></div>
             </div>
-          ) : (
-            <div className={cn('flex', isAssistant ? 'justify-start' : 'justify-end')}>
-              {message}
-            </div>
           )}
+          <div className={cn('flex', isAssistant ? 'justify-start' : 'justify-end')}>
+            {message}
+          </div>
+
         </div>
+      </div>
+        
         
         {/* Timestamp */}
         {isCurrentUser && (
