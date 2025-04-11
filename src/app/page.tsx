@@ -218,7 +218,7 @@ export default function Home() {
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-                      className="flex-1 bg-secondary transition-colors focus:border-0 border-0 min-h-20"
+                      className="flex-1 bg-secondary transition-colors focus:border-0 border-0 min-h-20 rounded-2xl"
                       autoComplete="off"
                       disabled={isSending}
                       aria-label="Message input"

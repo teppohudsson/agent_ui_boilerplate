@@ -25,7 +25,19 @@ export async function POST(request: Request) {
 
   try {
     const body: RequestBody = await request.json();
-    const messages = body.messages;
+
+    const system_prompt = "You are a helpful assistant.";
+    
+    const messages = [{
+      role: 'system' as OpenRouterMessage['role'],
+      content: system_prompt
+    },
+    // Convert previous messages to the format expected by the API
+    ...body.messages.map(msg => ({
+      role: msg.role as OpenRouterMessage['role'],
+      content: msg.content
+    }))
+    ];
     const model = body.model || 'google/gemini-2.0-flash-lite-001'; 
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -45,13 +57,9 @@ export async function POST(request: Request) {
       messages: messages,
     };
 
-    console.log('payload',payload)
-
     // Add stream: true to the payload for OpenRouter
     payload.stream = true;
-    
-    console.log('Sending to OpenRouter with payload:', JSON.stringify(payload));
-    
+        
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -63,9 +71,6 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload),
     });
     
-    console.log('OpenRouter response status:', response.status);
-    console.log('OpenRouter response headers:', JSON.stringify(Object.fromEntries([...response.headers])));
-
     if (!response.ok) {
       const errorData = await response.text(); // Get raw error text
       console.error(`OpenRouter API error: ${response.status} ${response.statusText}`, errorData);
