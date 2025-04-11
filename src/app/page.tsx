@@ -7,7 +7,7 @@ import { TextArea } from "@/components/ui/textarea";
 import ChatMessage from "@/components/chat/ChatMessage";
 import { useMessages } from "@/lib/hooks/useMessages";
 import { useAuth } from "@/lib/context/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 export default function Home() {
@@ -21,6 +21,8 @@ export default function Home() {
   const [isSending, setIsSending] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   
+  const [clearHistoryOpen, setIsClearHistoryOpen] = useState(false)  
+
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
@@ -28,14 +30,9 @@ export default function Home() {
   
   // Show welcome message only on first load
   useEffect(() => {
-    // Check if this is the first visit
-    const hasVisited = localStorage.getItem('has_visited_chat');
     
-    if (hasVisited) {
+    if (messages.length > 0) {
       setShowWelcome(false);
-    } else {
-      // Set flag in localStorage
-      localStorage.setItem('has_visited_chat', 'true');
     }
     
     // Focus input on load
@@ -107,7 +104,7 @@ export default function Home() {
   return (
     <Layout title="Chat">
       {/* Header section */}
-      <div role="presentation" className="composer-parent pb-4 flex flex-col focus-visible:outline-0 h-full">
+      <div role="presentation" className="composer-parent pb-4 pt-4 flex flex-col focus-visible:outline-0 h-full">
                 
         {/* Main chat container with full viewport height */}
         <div className="flex h-full flex-col w-full">
@@ -170,16 +167,9 @@ export default function Home() {
                           sender={msg.senderId}
                           timestamp={formatTime(msg.timestamp)}
                           isCurrentUser={msg.senderId === 'currentUser'}
+                          isTyping={msg.isTyping}
                         />
                       ))}
-                      {isTyping && (
-                        <ChatMessage
-                          message=""
-                          sender="assistant"
-                          timestamp={formatTime(new Date())}
-                          isTyping={true}
-                        />
-                      )}
                       <div ref={messagesEndRef} tabIndex={-1} />
                     </div>
                   )}
@@ -228,7 +218,7 @@ export default function Home() {
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-                      className="flex-1 transition-colors focus:border-0 border-0 min-h-20"
+                      className="flex-1 bg-secondary transition-colors focus:border-0 border-0 min-h-20"
                       autoComplete="off"
                       disabled={isSending}
                       aria-label="Message input"
@@ -251,7 +241,7 @@ export default function Home() {
                     </Button>
                   </form>
                   <div className="flex"> 
-                  <Dialog>
+                  <Dialog open={clearHistoryOpen} onOpenChange={setIsClearHistoryOpen}>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
@@ -267,16 +257,12 @@ export default function Home() {
                         <DialogTitle>Clear chat history?</DialogTitle>
                       </DialogHeader>
                       <p className="py-4">This will permanently delete all messages. This action cannot be undone.</p>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {}}
-                          className="transition-colors"
-                        >
-                          Cancel
-                        </Button>
+                      <div className="flex justify-end gap-4">
+                        <DialogClose className="transition-colors h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50">Cancel</DialogClose>
+
                         <Button
                           variant="destructive"
+                          size="sm"
                           onClick={() => {
                             clearMessages();
                             setShowWelcome(true);
@@ -290,6 +276,7 @@ export default function Home() {
                             // Focus back to input after clearing
                             setTimeout(() => {
                               inputRef.current?.focus();
+                              setIsClearHistoryOpen(false)
                             }, 100);
                           }}
                           className="transition-colors"
