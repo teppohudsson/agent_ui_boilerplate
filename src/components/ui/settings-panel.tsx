@@ -4,6 +4,7 @@ import { FC, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
+import SystemPromptManager from '@/components/settings/SystemPromptManager';
 
 interface UserPreferences {
   messageDensity: 'compact' | 'comfortable' | 'spacious';
@@ -65,41 +66,12 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ className }) => {
           <span className="sr-only">Settings</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Message Density</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={preferences.messageDensity === 'compact' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleDensityChange('compact')}
-                aria-pressed={preferences.messageDensity === 'compact'}
-              >
-                Compact
-              </Button>
-              <Button
-                variant={preferences.messageDensity === 'comfortable' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleDensityChange('comfortable')}
-                aria-pressed={preferences.messageDensity === 'comfortable'}
-              >
-                Comfortable
-              </Button>
-              <Button
-                variant={preferences.messageDensity === 'spacious' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleDensityChange('spacious')}
-                aria-pressed={preferences.messageDensity === 'spacious'}
-              >
-                Spacious
-              </Button>
-            </div>
-          </div>
-          
+        <div className="grid gap-6 py-4">
+                    
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Font Size</h3>
             <div className="flex flex-wrap gap-2">
@@ -128,6 +100,11 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ className }) => {
                 Large
               </Button>
             </div>
+          </div>
+          
+          {/* System Prompts Section */}
+          <div className="border-t pt-4">
+            <SystemPromptManager />
           </div>
         </div>
       </DialogContent>

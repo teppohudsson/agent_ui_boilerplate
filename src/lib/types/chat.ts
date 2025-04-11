@@ -20,3 +20,16 @@ export interface Conversation {
 }
 
 export type MessageStatus = 'sending' | 'sent' | 'error';
+
+export interface SystemPrompt {
+  id: string;         // Unique identifier
+  name: string;       // Display name
+  content: string;    // The actual prompt text
+  description?: string; // Optional description
+  createdAt: Date;    // Creation timestamp
+  updatedAt: Date;    // Last update timestamp
+  isDefault?: boolean; // Whether this is the default prompt
+}
+
+// Role type for messages sent to AI services
+export type MessageRole = 'user' | 'assistant' | 'system';

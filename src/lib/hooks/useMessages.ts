@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Message, MessageStatus } from '@/lib/types/chat';
+import { useSystemPrompts } from '@/lib/hooks/useSystemPrompts';
 
 // Local storage key for messages
 const STORAGE_KEY = 'chat_messages';
@@ -13,6 +14,7 @@ export function useMessages(conversationId?: string) {
   const [error, setError] = useState<Error | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [messageStatus, setMessageStatus] = useState<MessageStatus>('sent');
+  const { getActivePrompt } = useSystemPrompts();
 
   // Load messages from local storage on initial load
   useEffect(() => {
@@ -67,6 +69,8 @@ export function useMessages(conversationId?: string) {
       };
 
       setMessages(prev => [...prev, newMessage]);
+      // Get the active system prompt
+      const activePrompt = getActivePrompt();
       
       // Prepare the payload for the backend API
       const payload = {
@@ -76,7 +80,8 @@ export function useMessages(conversationId?: string) {
             content: message.content
           })),
           { role: 'user', content } // Add the current message
-        ]
+        ],
+        systemPrompt: activePrompt?.content
       };
 
       // Log the payload before sending

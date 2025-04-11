@@ -9,6 +9,7 @@ import { useMessages } from "@/lib/hooks/useMessages";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import SystemPromptSelector from "@/components/chat/SystemPromptSelector";
 
 export default function Home() {
   const { messages, loading, sendMessage, clearMessages, messageStatus, isTyping } = useMessages();
@@ -108,6 +109,9 @@ export default function Home() {
                 
         {/* Main chat container with full viewport height */}
         <div className="flex h-full flex-col w-full">
+          <div className="fixed top-5 left-20 z-40">
+            <SystemPromptSelector className="w-[200px]" />
+          </div>
         {/* Chat messages area - scrollable */}
         <div className="flex shrink basis-auto flex-col overflow-hidden grow">
           <div className="relative h-full">
@@ -240,8 +244,8 @@ export default function Home() {
                       )}
                     </Button>
                   </form>
-                  <div className="flex"> 
-                  <Dialog open={clearHistoryOpen} onOpenChange={setIsClearHistoryOpen}>
+                  <div className="flex justify-between items-center">
+                    <Dialog open={clearHistoryOpen} onOpenChange={setIsClearHistoryOpen}>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"

@@ -10,6 +10,7 @@ interface OpenRouterMessage {
 interface RequestBody {
   messages: OpenRouterMessage[];
   model?: string; // Allow overriding the model
+  systemPrompt?: string; // Allow specifying a system prompt
 }
 
 export async function POST(request: Request) {
@@ -26,11 +27,12 @@ export async function POST(request: Request) {
   try {
     const body: RequestBody = await request.json();
 
-    const system_prompt = "You are a helpful assistant.";
+    // Use the provided system prompt or fall back to default
+    const systemPrompt = body.systemPrompt || "You are a helpful assistant.";
     
     const messages = [{
       role: 'system' as OpenRouterMessage['role'],
-      content: system_prompt
+      content: systemPrompt
     },
     // Convert previous messages to the format expected by the API
     ...body.messages.map(msg => ({
@@ -38,7 +40,8 @@ export async function POST(request: Request) {
       content: msg.content
     }))
     ];
-    const model = body.model || 'google/gemini-2.0-flash-lite-001'; 
+    const model = body.model || 'anthropic/claude-3.7-sonnet'; 
+//    const model = body.model || 'google/gemini-2.0-flash-lite-001'; 
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(

@@ -38,6 +38,9 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
       </body>
-    </html>
+  
+  
+  
+  </html>
   );
 }
