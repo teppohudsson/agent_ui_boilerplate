@@ -1,4 +1,5 @@
 import { FC, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
@@ -97,8 +98,8 @@ const ChatMessage: FC<ChatMessageProps> = ({
               <div className="h-2 w-2 animate-bounce rounded-full bg-current"></div>
             </div>
           )}
-          <div className={cn('flex', isAssistant ? 'justify-start' : 'justify-end')}>
-            {message}
+          <div className={cn('flex flex-col', isAssistant ? 'justify-start' : 'justify-end')}>
+            <ReactMarkdown>{message}</ReactMarkdown>
           </div>
 
         </div>

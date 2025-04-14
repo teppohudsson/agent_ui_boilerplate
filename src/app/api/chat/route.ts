@@ -68,8 +68,10 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000', // Use an env var or default
-        'X-Title': process.env.NEXT_PUBLIC_APP_NAME || 'Chat App', // Use an env var or default
+        'HTTP-Referer': 'https://www.precode.ai',
+        'X-Title': 'Precode'
+//        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000', // Use an env var or default
+//        'X-Title': process.env.NEXT_PUBLIC_APP_NAME || 'Chat App', // Use an env var or default
       },
       body: JSON.stringify(payload),
     });
