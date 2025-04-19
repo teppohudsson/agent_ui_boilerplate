@@ -12,7 +12,7 @@ const defaultSystemPrompts: SystemPrompt[] = [
   {
     id: 'default-general',
     name: 'General Assistant',
-    content: 'You are a helpful assistant. You provide clear, concise, and accurate information to the user\'s questions.',
+    content: 'You are a helpful assistant. You provide clear, concise, and accurate information to the user\'s question.',
     description: 'A general-purpose assistant that provides helpful responses.',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -30,7 +30,7 @@ const defaultSystemPrompts: SystemPrompt[] = [
   {
     id: 'default-code',
     name: 'Code Helper',
-    content: 'You are a coding assistant. You help users with programming questions, debugging issues, and explaining technical concepts. Provide code examples when appropriate.',
+    content: 'You are a coding assistant. You help users with programming question, debugging issues, and explaining technical concepts. Provide code examples when appropriate.',
     description: 'An assistant specialized in programming and technical help.',
     createdAt: new Date(),
     updatedAt: new Date(),

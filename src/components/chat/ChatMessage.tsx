@@ -1,7 +1,8 @@
-import { FC, useEffect, useRef } from 'react';
+import React, { FC, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, parseMessageWithTags, MessageSegment } from '@/lib/utils';
+// MessageSegment type is now imported from utils
 
 interface ChatMessageProps {
   message: string;
@@ -20,6 +21,12 @@ const ChatMessage: FC<ChatMessageProps> = ({
 }) => {
   // Determine if the sender is the assistant (for styling)
   const isAssistant = sender === 'you' || (!isCurrentUser && sender !== 'currentUser');
+
+  // Parse message only if it's from the assistant
+  const messageSegments = isAssistant
+    ? parseMessageWithTags(message)
+    : [{ type: 'text', content: message }];
+
   const messageRef = useRef<HTMLDivElement>(null);
   
   // Announce new messages to screen readers
@@ -99,7 +106,64 @@ const ChatMessage: FC<ChatMessageProps> = ({
             </div>
           )}
           <div className={cn('flex flex-col', isAssistant ? 'justify-start' : 'justify-end')}>
-            <ReactMarkdown>{message}</ReactMarkdown>
+            {/* Render segments based on their type */}
+            {messageSegments.map((segment, index) => {
+              switch (segment.type) {
+                case 'thinking':
+                  return (
+                    <div key={index} className="mb-6"> {/* Maintain bottom margin */}
+                      <span className="thinking-segment text-gray-600 dark:text-gray-400 rounded inline-block align-middle italic mr-1"> {/* Label styling */}
+                        Thinking:
+                      </span>
+                      {/* Render content with Markdown, applying prose styles */}
+                      <div className="prose dark:prose-invert inline-block align-middle italic">
+                         <ReactMarkdown>{segment.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  );
+                case 'tool_name':
+                  return (
+                    <div key={index} className="my-1"> {/* Use margin y for spacing similar to mx-1 */}
+                      <span className="tool-segment bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-1 rounded inline-block align-middle font-mono text-xs mr-1"> {/* Label styling */}
+                        Task:
+                      </span>
+                      {/* Render content with Markdown, applying prose styles */}
+                      <div className="prose dark:prose-invert inline-block align-middle">
+                         <ReactMarkdown>{segment.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  );
+                case 'question':
+                   return (
+                     <div key={index} className="my-1"> {/* Use margin y for spacing similar to mx-1 */}
+                       <span className="question-segment bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-1 rounded inline-block align-middle mr-1"> {/* Label styling */}
+                         Question:
+                       </span>
+                       {/* Render content with Markdown, applying prose styles */}
+                       <div className="prose dark:prose-invert inline-block align-middle">
+                          <ReactMarkdown>{segment.content}</ReactMarkdown>
+                       </div>
+                     </div>
+                   );
+                case 'write_to_doc':
+                   return (
+                     <div key={index} className="my-1"> {/* Use margin y for spacing similar to mx-1 */}
+                       <span className="write-doc-segment bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 p-1 rounded inline-block align-middle mr-1"> {/* Label styling */}
+                         Writing:
+                       </span>
+                       {/* Render content with Markdown, applying prose styles */}
+                       <div className="prose dark:prose-invert inline-block align-middle">
+                          <ReactMarkdown>{segment.content}</ReactMarkdown>
+                       </div>
+                     </div>
+                   );
+                case 'text':
+                default:
+                  // Render normal text segments using ReactMarkdown, skip if empty/whitespace
+                  // Wrap ReactMarkdown in a div with prose classes for styling
+                  return segment.content.trim() ? <div key={index} className="prose dark:prose-invert inline-block align-middle"><ReactMarkdown>{segment.content}</ReactMarkdown></div> : null;
+              }
+            })}
           </div>
 
         </div>
