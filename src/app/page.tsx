@@ -168,7 +168,7 @@ export default function Home() {
                       {messages.map((msg) => (
                         <ChatMessage
                           key={msg.id}
-                          message={msg.content}
+                          segments={msg.segments || [{ type: 'text', content: msg.content }]} // Pass segments, fallback to text segment if none
                           sender={msg.senderId}
                           timestamp={formatTime(msg.timestamp)}
                           isCurrentUser={msg.senderId === 'currentUser'}

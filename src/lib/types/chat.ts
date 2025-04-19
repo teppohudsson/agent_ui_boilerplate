@@ -10,7 +10,10 @@ export interface Message {
   senderId: string;
   timestamp: Date;
   isTyping?: boolean;
+  segments?: ChatSegment[]; // Add segments property
 }
+
+import { ChatSegment } from './chat-segments';
 
 export interface Conversation {
   id: string;

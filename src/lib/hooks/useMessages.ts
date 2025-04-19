@@ -122,51 +122,25 @@ export function useMessages(conversationId?: string) {
         setMessages(prev => [...prev, aiMessage]);
         setIsTyping(true);
 
-        // Process the stream
-        if (response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          
-          let accumulatedContent = '';
-          let chunkCount = 0;
-          
-          while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) {
-              console.log('Stream reading complete, total chunks:', chunkCount);
-              break;
-            }
-            
-            // Decode the chunk and add it to the accumulated content
-            const chunk = decoder.decode(value, { stream: true });
-            chunkCount++;
-            accumulatedContent += chunk;
-            
-            // Update the AI message with the accumulated content
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === aiMessageId
-                  ? { ...msg, content: accumulatedContent }
-                  : msg
-              )
-            );
-          }
-          
-          // Final update to the AI message - mark as no longer typing
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === aiMessageId
-                ? { ...msg, isTyping: false }
-                : msg
-            )
-          );
-          
-          setIsTyping(false);
-          setMessageStatus('sent');
-        } else {
-          throw new Error("No response body from API");
+        // Process the JSON response
+        const responseData = await response.json();
+
+        if (!responseData.segments || !Array.isArray(responseData.segments)) {
+           console.error('Unexpected response structure from API', responseData);
+           throw new Error('Unexpected response from AI service.');
         }
+
+        // Update the AI message with the received segments
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === aiMessageId
+              ? { ...msg, segments: responseData.segments, isTyping: false }
+              : msg
+          )
+        );
+
+        setIsTyping(false);
+        setMessageStatus('sent');
 
       } catch (err) {
         console.error("Failed to send message or get AI response:", err);
@@ -175,7 +149,7 @@ export function useMessages(conversationId?: string) {
         // Optionally: Revert adding the user message or add an error message to the chat?
         // For now, we keep the user message and just show an error state/log it.
       } finally {
-        // Ensure typing indicator state is reset if it were used
+        // Ensure typing indicator state is reset
         setIsTyping(false);
       }
 
