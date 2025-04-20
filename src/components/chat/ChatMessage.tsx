@@ -1,7 +1,7 @@
 import React, { FC, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, parseMessageWithTags, MessageSegment } from '@/lib/utils';
+import { cn, MessageSegment } from '@/lib/utils';
 // Import ChatSegment type
 import { ChatSegment } from '@/lib/types/chat-segments';
 
@@ -143,8 +143,8 @@ const ChatMessage: FC<ChatMessageProps> = ({
                   );
                 case 'thinking':
                   return segment.content.trim() ? (
-                    <div key={index} className="italic">
-                      {segment.content}
+                    <div key={index} className="italic prose dark:prose-invert">
+                      <ReactMarkdown>{segment.content}</ReactMarkdown>
                     </div>
                   ) : null;
                 default:

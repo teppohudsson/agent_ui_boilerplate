@@ -58,8 +58,10 @@ export async function POST(request: Request) {
     } = {
       model: model,
       messages: messages,
+      stream: true, // Enable streaming
     };
 
+    // Make the request to OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,95 +84,85 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = await response.json();
-
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
-      console.error('Unexpected response structure from OpenRouter', data);
-      return NextResponse.json({ error: 'Unexpected response from AI service.' }, { status: 500 });
+    // Check if response body is available for streaming
+    if (!response.body) {
+      console.error('Response body is not available for streaming');
+      return NextResponse.json({ error: 'Streaming not supported by the server' }, { status: 500 });
     }
 
-    const fullContent = data.choices[0].message.content;
-
-    // Parsing logic for segments - ensuring closing tags are not included in content
-    const segments: ChatSegment[] = [];
-    let remainingContent = fullContent;
-
-    while (remainingContent.length > 0) {
-      // Match for thinking tags (preserved as is)
-      const thinkingMatch = remainingContent.match(/<thinking>(.*?)<\/thinking>/s);
+    // Create a TransformStream to process the streaming response
+    const { readable, writable } = new TransformStream();
+    
+    // Process the stream
+    const processStream = async () => {
+      // We've already checked response.body is not null above
+      const reader = response.body!.getReader();
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const writer = writable.getWriter();
       
-      // Match for any XML-style opening tag except thinking
-      const toolTagMatch = remainingContent.match(/<([a-zA-Z_][a-zA-Z0-9_]*(?:_[a-zA-Z0-9_]+)*)(?:\s+[^>]*)?>/);
+      let buffer = '';
       
-      // Process tool tags first (if they appear before thinking tags)
-      if (toolTagMatch && (!thinkingMatch || toolTagMatch.index < thinkingMatch.index)) {
-        // Add preceding text as a text segment
-        if (toolTagMatch.index > 0) {
-          segments.push({ type: 'text', content: remainingContent.substring(0, toolTagMatch.index) });
-        }
-        
-        // Get the tag name
-        const tagName = toolTagMatch[1];
-        
-        // Skip if it's a thinking tag (should be caught by thinkingMatch)
-        if (tagName !== 'thinking') {
-          // Find the corresponding closing tag
-          const closingTagRegex = new RegExp(`<\\/${tagName}>`, 'i');
-          const closingTagMatch = remainingContent.substring(toolTagMatch.index + toolTagMatch[0].length).match(closingTagRegex);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
           
-          if (closingTagMatch) {
-            // Extract content between opening and closing tags
-            const contentStartIndex = toolTagMatch.index + toolTagMatch[0].length;
-            const contentEndIndex = contentStartIndex + closingTagMatch.index;
-            const toolContent = remainingContent.substring(contentStartIndex, contentEndIndex);
-            
-            // Create a ToolUseSegment with proper parameters
-            segments.push({
-              type: 'tool_use',
-              toolName: tagName,
-              parameters: { content: toolContent }
-            });
-
-            segments.push({ type: 'text', content: toolContent });
-            
-            // Move past the closing tag
-            remainingContent = remainingContent.substring(contentEndIndex + closingTagMatch[0].length);
-          } else {
-            // No closing tag found, treat as regular tool use without parameters
-            segments.push({
-              type: 'tool_use',
-              toolName: tagName,
-              parameters: {}
-            });
-            
-            // Move past the opening tag
-            remainingContent = remainingContent.substring(toolTagMatch.index + toolTagMatch[0].length);
+          if (done) {
+            // If there's any remaining content in the buffer, send it
+            if (buffer.trim()) {
+              await writer.write(encoder.encode(`data: ${JSON.stringify({ text: buffer })}\n\n`));
+            }
+            break;
           }
-        } else {
-          // If somehow a thinking tag was caught here, add it as regular text
-          segments.push({ type: 'text', content: toolTagMatch[0] });
           
-          // Move past this tag
-          remainingContent = remainingContent.substring(toolTagMatch.index + toolTagMatch[0].length);
+          // Decode the chunk and add it to our buffer
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+          
+          // Process the buffer line by line
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep the last (potentially incomplete) line in the buffer
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(5));
+                
+                // Extract content from the streaming response
+                if (data.choices && data.choices[0]) {
+                  const delta = data.choices[0].delta;
+                  
+                  // If there's content in this chunk, send it directly
+                  if (delta && delta.content) {
+                    // Send the raw text chunk to the client
+                    await writer.write(encoder.encode(`data: ${JSON.stringify({ text: delta.content })}\n\n`));
+                  }
+                }
+              } catch (e) {
+                console.error('Error parsing streaming response:', e, line);
+              }
+            }
+          }
         }
-      } else if (thinkingMatch) {
-        // Add preceding text as a text segment
-        if (thinkingMatch.index > 0) {
-          segments.push({ type: 'text', content: remainingContent.substring(0, thinkingMatch.index) });
-        }
-        // Add thinking segment
-        segments.push({ type: 'thinking', content: thinkingMatch[1].trim() });
-        remainingContent = remainingContent.substring(thinkingMatch.index + thinkingMatch[0].length);
+      } catch (error) {
+        console.error('Error processing stream:', error);
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: 'Stream processing error' })}\n\n`));
+      } finally {
+        await writer.close();
       }
-      else {
-        // No more tool or thinking segments, add the rest as a text segment
-        segments.push({ type: 'text', content: remainingContent });
-        remainingContent = '';
-      }
-    }
-
-
-    return NextResponse.json({ segments });
+    };
+    
+    // Start processing the stream without awaiting it
+    processStream();
+    
+    // Return a streaming response
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
 
   } catch (error) {
     console.error('Error processing chat request:', error);
@@ -183,5 +175,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-import { ChatSegment, TextSegment, ToolUseSegment, ToolResultSegment } from '../../../lib/types/chat-segments';

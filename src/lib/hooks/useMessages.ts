@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Message, MessageStatus } from '@/lib/types/chat';
 import { useSystemPrompts } from '@/lib/hooks/useSystemPrompts';
+import { parseContentToSegments } from '@/lib/utils';
 
 // Local storage key for messages
 const STORAGE_KEY = 'chat_messages';
@@ -88,7 +89,22 @@ export function useMessages(conversationId?: string) {
 
       // Call the backend API
       try {
+        // Create an empty AI message that will be updated incrementally
+        const aiMessageId = `ai-${Date.now()}`;
+        const aiMessage: Message = {
+          id: aiMessageId,
+          content: '',
+          senderId: 'assistant',
+          timestamp: new Date(),
+          isTyping: true, // Show typing indicator while streaming
+          segments: [] // Initialize with empty segments array
+        };
         
+        // Add the empty AI message to the chat
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(true);
+        
+        // Make the API request
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
@@ -108,36 +124,123 @@ export function useMessages(conversationId?: string) {
           throw new Error(errorMsg);
         }
 
-        // Create an empty AI message that will be updated incrementally
-        const aiMessageId = `ai-${Date.now()}`;
-        const aiMessage: Message = {
-          id: aiMessageId,
-          content: '',
-          senderId: 'assistant',
-          timestamp: new Date(),
-          isTyping: true // Show typing indicator while streaming
-        };
-        
-        // Add the empty AI message to the chat
-        setMessages(prev => [...prev, aiMessage]);
-        setIsTyping(true);
-
-        // Process the JSON response
-        const responseData = await response.json();
-
-        if (!responseData.segments || !Array.isArray(responseData.segments)) {
-           console.error('Unexpected response structure from API', responseData);
-           throw new Error('Unexpected response from AI service.');
+        // Check if the response is a stream (text/event-stream)
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && contentType.includes('text/event-stream')) {
+          // Process as a stream
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          
+          if (!reader) {
+            throw new Error('Stream reader not available');
+          }
+          
+          let buffer = '';
+          let accumulatedText = ''; // Store the accumulated text for parsing
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              // Final parsing of accumulated text when stream ends
+              if (accumulatedText.trim()) {
+                const segments = parseContentToSegments(accumulatedText);
+                setMessages(prev =>
+                  prev.map(msg =>
+                    msg.id === aiMessageId
+                      ? { ...msg, segments, isTyping: false }
+                      : msg
+                  )
+                );
+              }
+              break;
+            }
+            
+            // Decode the chunk and add it to our buffer
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            
+            // Process the buffer line by line
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep the last (potentially incomplete) line in the buffer
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(5));
+                  
+                  // Handle raw text chunks
+                  if (data.text) {
+                    // Append the new text to our accumulated text
+                    accumulatedText += data.text;
+                    
+                    // Parse the accumulated text into segments
+                    const segments = parseContentToSegments(accumulatedText);
+                    
+                    // Update the message with the latest segments
+                    setMessages(prev =>
+                      prev.map(msg =>
+                        msg.id === aiMessageId
+                          ? { ...msg, segments, isTyping: true }
+                          : msg
+                      )
+                    );
+                  }
+                  
+                  // If there's an error, handle it
+                  if (data.error) {
+                    console.error('Error in stream:', data.error);
+                    throw new Error(data.error);
+                  }
+                } catch (e) {
+                  console.error('Error parsing streaming response:', e, line);
+                }
+              }
+            }
+          }
+          
+          // Streaming is complete, update the typing state
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === aiMessageId
+                ? { ...msg, isTyping: false }
+                : msg
+            )
+          );
+        } else {
+          // Fallback to non-streaming response
+          try {
+            const responseData = await response.json();
+            
+            // Handle both formats: pre-parsed segments or raw text
+            if (responseData.segments && Array.isArray(responseData.segments)) {
+              // Handle pre-parsed segments (backward compatibility)
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === aiMessageId
+                    ? { ...msg, segments: responseData.segments, isTyping: false }
+                    : msg
+                )
+              );
+            } else if (responseData.text) {
+              // Handle raw text response
+              const segments = parseContentToSegments(responseData.text);
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === aiMessageId
+                    ? { ...msg, segments, isTyping: false }
+                    : msg
+                )
+              );
+            } else {
+              console.error('Unexpected response structure from API', responseData);
+              throw new Error('Unexpected response from AI service.');
+            }
+          } catch (e) {
+            console.error('Error parsing JSON response:', e);
+            throw new Error('Failed to parse response from AI service.');
+          }
         }
-
-        // Update the AI message with the received segments
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === aiMessageId
-              ? { ...msg, segments: responseData.segments, isTyping: false }
-              : msg
-          )
-        );
 
         setIsTyping(false);
         setMessageStatus('sent');

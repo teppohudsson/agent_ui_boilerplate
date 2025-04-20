@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ChatSegment } from "./types/chat-segments"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -11,6 +12,155 @@ export type MessageSegment =
   | { type: 'tool_name'; content: string }
   | { type: 'question'; content: string }
   | { type: 'write_to_doc'; content: string };
+
+/**
+ * Parses raw text content into an array of ChatSegment objects.
+ * Identifies different segment types based on content patterns.
+ *
+ * @param content The raw text content to parse
+ * @returns An array of ChatSegment objects
+ */
+export function parseContentToSegments(content: string): ChatSegment[] {
+  const segments: ChatSegment[] = [];
+  
+  // Store matched segments with their positions
+  const matches: {start: number; end: number; segment: ChatSegment}[] = [];
+  
+  // Process the content to find tags
+  let remainingContent = content;
+  let currentPosition = 0;
+  
+  // Regular expression to find any opening tag
+  const tagRegex = /<(\w+)>/i;
+  
+  while (remainingContent.length > 0) {
+    // Find the next tag
+    const toolTagMatch = remainingContent.match(tagRegex);
+    
+    if (!toolTagMatch) {
+      // No more tags found, add remaining content as text if any
+      if (remainingContent.trim()) {
+        matches.push({
+          start: currentPosition,
+          end: currentPosition + remainingContent.length,
+          segment: { type: 'text', content: remainingContent.trim() }
+        });
+      }
+      break;
+    }
+    
+    // Since we've checked toolTagMatch is not null, we can safely use its properties
+    const matchIndex = toolTagMatch.index || 0;
+    const matchLength = toolTagMatch[0].length;
+    
+    // Add text before the tag if any
+    if (matchIndex > 0) {
+      const textBeforeTag = remainingContent.substring(0, matchIndex).trim();
+      if (textBeforeTag) {
+        matches.push({
+          start: currentPosition,
+          end: currentPosition + matchIndex,
+          segment: { type: 'text', content: textBeforeTag }
+        });
+      }
+    }
+    
+    const tagName = toolTagMatch[1].toLowerCase();
+    
+    if (tagName === 'thinking') {
+      // Handle thinking tag specifically
+      const thinkingClosingTag = '</thinking>';
+      const closingTagIndex = remainingContent.indexOf(thinkingClosingTag, matchIndex);
+      
+      if (closingTagIndex !== -1) {
+        const contentStartIndex = matchIndex + matchLength;
+        const thinkingContent = remainingContent.substring(contentStartIndex, closingTagIndex).trim();
+        
+        matches.push({
+          start: currentPosition + matchIndex,
+          end: currentPosition + closingTagIndex + thinkingClosingTag.length,
+          segment: { type: 'thinking', content: thinkingContent }
+        });
+        
+        // Move past the closing tag
+        const newPosition = closingTagIndex + thinkingClosingTag.length;
+        currentPosition += newPosition;
+        remainingContent = remainingContent.substring(newPosition);
+      } else {
+        // No closing tag found, treat as text
+        currentPosition += matchIndex + matchLength;
+        remainingContent = remainingContent.substring(matchIndex + matchLength);
+      }
+    } else {
+      // Handle other tool tags
+      // Find the corresponding closing tag
+      const closingTagRegex = new RegExp(`<\\/${tagName}>`, 'i');
+      const closingTagMatch = remainingContent.substring(matchIndex + matchLength).match(closingTagRegex);
+      
+      if (closingTagMatch && closingTagMatch.index !== undefined) {
+        // Extract content between opening and closing tags
+        const contentStartIndex = matchIndex + matchLength;
+        const contentEndIndex = contentStartIndex + closingTagMatch.index;
+        const toolContent = remainingContent.substring(contentStartIndex, contentEndIndex);
+        
+        // Create a ToolUseSegment with proper parameters
+        matches.push({
+          start: currentPosition + matchIndex,
+          end: currentPosition + contentEndIndex + closingTagMatch[0].length,
+          segment: {
+            type: 'tool_use',
+            toolName: tagName,
+            parameters: { content: toolContent }
+          }
+        });
+        
+        // Also add a text segment for the tool content
+        matches.push({
+          start: currentPosition + contentStartIndex,
+          end: currentPosition + contentEndIndex,
+          segment: { type: 'text', content: toolContent }
+        });
+        
+        // Move past the closing tag
+        const newPosition = contentEndIndex + closingTagMatch[0].length;
+        currentPosition += newPosition;
+        remainingContent = remainingContent.substring(newPosition);
+      } else {
+        // No closing tag found, treat as text
+        currentPosition += matchIndex + matchLength;
+        remainingContent = remainingContent.substring(matchIndex + matchLength);
+      }
+    }
+  }
+  
+  // Sort matches by their position in the text
+  matches.sort((a, b) => a.start - b.start);
+  
+  // Process matches to create final segments list, removing duplicates and overlaps
+  let lastEnd = 0;
+  const processedPositions = new Set<number>();
+  
+  for (const match of matches) {
+    // Skip if this segment has already been processed (for text segments that might overlap with tool content)
+    if (processedPositions.has(match.start)) {
+      continue;
+    }
+    
+    // Mark this position as processed
+    processedPositions.add(match.start);
+    
+    // Add the segment
+    segments.push(match.segment);
+    lastEnd = Math.max(lastEnd, match.end);
+  }
+  
+  // If no segments were found, treat the entire content as a text segment
+  if (segments.length === 0 && content.trim()) {
+    segments.push({ type: 'text', content: content.trim() });
+  }
+  
+  return segments;
+}
 
 /**
  * Parses a message string containing specific XML-like tags into an array of segments.
