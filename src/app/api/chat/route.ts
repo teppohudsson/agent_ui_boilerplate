@@ -125,21 +125,28 @@ export async function POST(request: Request) {
           
           for (const line of lines) {
             if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(5));
-                
-                // Extract content from the streaming response
-                if (data.choices && data.choices[0]) {
-                  const delta = data.choices[0].delta;
+              const jsonString = line.slice(5);
+              if (jsonString === '[DONE]') {
+                // Handle the end of the stream - you might need to signal this to the client
+                // For now, we'll just skip parsing and potentially add a final message if needed later
+                console.log('Stream finished with [DONE]');
+              } else {
+                try {
+                  const data = JSON.parse(jsonString);
                   
-                  // If there's content in this chunk, send it directly
-                  if (delta && delta.content) {
-                    // Send the raw text chunk to the client
-                    await writer.write(encoder.encode(`data: ${JSON.stringify({ text: delta.content })}\n\n`));
+                  // Extract content from the streaming response
+                  if (data.choices && data.choices[0]) {
+                    const delta = data.choices[0].delta;
+                    
+                    // If there's content in this chunk, send it directly
+                    if (delta && delta.content) {
+                      // Send the raw text chunk to the client
+                      await writer.write(encoder.encode(`data: ${JSON.stringify({ text: delta.content })}\n\n`));
+                    }
                   }
+                } catch (e) {
+                  console.error('Error parsing streaming response:', e, line);
                 }
-              } catch (e) {
-                console.error('Error parsing streaming response:', e, line);
               }
             }
           }
