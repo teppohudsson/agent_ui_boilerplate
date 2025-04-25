@@ -36,15 +36,6 @@ const defaultSystemPrompts: SystemPrompt[] = [
     updatedAt: new Date(),
     isDefault: false
   },
-  {
-    id: 'default-learning',
-    name: 'Learning Tutor',
-    content: 'You are an educational tutor. You help users understand complex topics by breaking them down into simpler concepts. Provide examples and analogies to aid understanding.',
-    description: 'An assistant that helps with learning and understanding complex topics.',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    isDefault: false
-  }
 ];
 
 export function useSystemPrompts() {

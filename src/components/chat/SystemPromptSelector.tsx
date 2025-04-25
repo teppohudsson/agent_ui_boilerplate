@@ -66,7 +66,7 @@ const SystemPromptSelector: FC<SystemPromptSelectorProps> = ({ className }) => {
 
       {isOpen && (
         <div className="absolute z-10 mt-1 w-full bg-popover rounded-md shadow-lg border border-border overflow-hidden">
-          <div className="py-1 max-h-[200px] overflow-y-auto">
+          <div className="py-1 max-h-[400px] overflow-y-auto">
             {systemPrompts.map((prompt) => (
               <button
                 key={prompt.id}
