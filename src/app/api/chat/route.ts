@@ -18,10 +18,65 @@ export async function POST(request: Request) {
 
   if (!apiKey) {
     console.error('OPENROUTER_API_KEY is not set');
-    return NextResponse.json(
-      { error: 'API key not configured.' },
-      { status: 500 }
-    );
+    
+    // Return a streaming response with helpful error message and instructions
+    const errorMessage = `## ⚠️ API Key Configuration Required
+
+The **OPENROUTER_API_KEY** environment variable is not set. To fix this:
+
+### Step 1: Get your API key
+1. Visit [OpenRouter.ai](https://openrouter.ai/)
+2. Sign up or log in to your account
+3. Navigate to your [API Keys page](https://openrouter.ai/keys)
+4. Create a new API key or copy an existing one
+
+### Step 2: Add the API key to your environment
+Create or update your \`.env.local\` file in the root of your project:
+
+\`\`\`bash
+OPENROUTER_API_KEY=your_api_key_here
+\`\`\`
+
+### Step 3: Restart your development server
+After adding the environment variable, restart your Next.js development server:
+- Stop the current server (Ctrl+C or Cmd+C)
+- Run \`npm run dev\` (or \`yarn dev\` / \`pnpm dev\`) again
+
+### Important Notes:
+- Never commit your \`.env.local\` file to version control
+- The \`.env.local\` file should already be in your \`.gitignore\`
+- Make sure there are no spaces around the \`=\` sign
+- The API key should not be wrapped in quotes unless it contains special characters
+
+Once you've added the API key and restarted the server, try sending a message again!`;
+
+    // Create a streaming response with the error message
+    const { readable, writable } = new TransformStream();
+    const encoder = new TextEncoder();
+    const writer = writable.getWriter();
+    
+    // Write the error message as a streaming response
+    (async () => {
+      try {
+        // Send the error message in chunks to simulate streaming
+        const chunks = errorMessage.split(/(.{50})/).filter(chunk => chunk.length > 0);
+        for (const chunk of chunks) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+          // Small delay to simulate streaming
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      } finally {
+        await writer.close();
+      }
+    })();
+    
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
   }
 
   try {
